@@ -1,0 +1,44 @@
+{
+  "name": "telegram-bot",
+  "version": "1.0.0",
+  "description": "API para atender llamadas a un bot de telegram",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --env-file=.env index.js",
+    "dev": "node --env-file=.env --watch index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidgosp/telegram-bot.git"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/davidgosp/telegram-bot/issues"
+  },
+  "homepage": "https://github.com/davidgosp/telegram-bot#readme",
+  "devDependencies": {
+    "eslint": "^9.24.0",
+    "neostandard": "^0.12.1",
+    "sequelize-cli": "^6.6.2"
+  },
+  "dependencies": {
+    "@chroma-core/default-embed": "^0.1.8",
+    "chromadb": "^3.0.17",
+    "connect-mongo": "^5.1.0",
+    "express": "^5.1.0",
+    "moment": "^2.30.1",
+    "mongoose": "^8.15.0",
+    "mysql2": "^3.14.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "openai": "^5.20.1",
+    "sequelize": "^6.37.7",
+    "ws": "^8.18.3"
+  }
+}

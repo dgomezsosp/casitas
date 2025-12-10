@@ -1,0 +1,8 @@
+const express = require('express')
+const router = express.Router()
+
+// Customer Routes
+
+router.use('/customer/elements', require('./customer/elements'))
+
+module.exports = router

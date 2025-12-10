@@ -1,17 +1,22 @@
 {
-  "name": "buscador-avanzado",
-  "version": "1.0.0",
-  "description": "",
-  "main": "openai-sin-almacenar-embedding.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@chroma-core/openai": "^0.1.8",
-    "chromadb": "^3.1.5",
-    "neo4j-driver": "^6.0.1",
-    "selenium-webdriver": "^4.38.0"
-  }
+    "dependencies": {
+        "express": "^5",
+        "http-proxy-middleware": "^2.0.6",
+        "ws": "^8.18.3"
+    },
+    "scripts": {
+        "dev": "npm-run-all --parallel dev:front-admin dev:front-customer proxy",
+        "dev:front-admin": "cd client/admin/front-admin && npm run dev",
+        "dev:front-customer": "cd client/customer && npm run dev",
+        "install": "npm-run-all --parallel install:front-admin install:front-customer",
+        "install:front-admin": "cd client/admin/front-admin && npm install",
+        "install:front-customer": "cd client/customer && npm install",
+        "proxy": "node ./proxy.js",
+        "start": "npm-run-all --parallel start:front-admin start:front-customer",
+        "start:front-admin": "cd client/admin/front-admin && npm run dev",
+        "start:front-customer": "cd client/customer && npm run dev"
+    },
+    "devDependencies": {
+        "npm-run-all": "^4.1.5"
+    }
 }

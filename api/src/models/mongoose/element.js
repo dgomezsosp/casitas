@@ -22,7 +22,7 @@ module.exports = (mongoose) => {
       longitude: Number,
       deletedAt: Date
     },
-    { 
+    {
       timestamps: true,
       strict: false // Permite campos adicionales no definidos en el schema
     }

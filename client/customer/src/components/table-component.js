@@ -1,29 +1,18 @@
-// import { store } from './redux/store.js'
-
 class TableComponent extends HTMLElement {
   constructor () {
     super()
     this.shadow = this.attachShadow({ mode: 'open' })
-    this.endpoint = null // Se definirá cuando se implemente
     this.data = []
-    this.unsubscribe = null
   }
 
   connectedCallback () {
-    // Cuando se implemente Redux, descomentar:
-    // this.unsubscribe = store.subscribe(() => {
-    //   const currentState = store.getState()
-    //   // Aquí se manejará la lógica de actualización
-    // })
-
     this.render()
-  }
 
-  disconnectedCallback () {
-    // Cuando se implemente Redux, descomentar:
-    // if (this.unsubscribe) {
-    //   this.unsubscribe()
-    // }
+    // Escuchar eventos de búsqueda
+    document.addEventListener('search-results', (event) => {
+      this.data = event.detail.data || []
+      this.renderData()
+    })
   }
 
   render () {
@@ -113,63 +102,131 @@ class TableComponent extends HTMLElement {
       .empty-state p {
         font-size: 1.1rem;
       }
+
+      .property-card {
+        padding: 15px;
+        background-color: hsl(0, 0%, 98%);
+        border: 1px solid hsl(0, 0%, 90%);
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+
+      .property-card:hover {
+        background-color: white;
+        border-color: hsl(200, 77%, 35%);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .property-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: hsl(200, 77%, 25%);
+        margin-bottom: 8px;
+      }
+
+      .property-location {
+        font-size: 0.95rem;
+        color: hsl(0, 0%, 40%);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .property-details {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
+        color: hsl(0, 0%, 50%);
+      }
+
+      .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .property-price {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: hsl(280, 56%, 47%);
+        margin-top: 10px;
+      }
+
+      .location-icon {
+        width: 16px;
+        height: 16px;
+        fill: hsl(0, 0%, 40%);
+      }
     </style>
 
     <div class="table-container">
       <div class="table-header">
         <span>Resultados</span>
+        <span class="result-count">0 viviendas</span>
       </div>
       <div class="table-body">
         <div class="empty-state">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <title>table</title>
-            <path d="M5,4H19A2,2 0 0,1 21,6V18A2,2 0 0,1 19,20H5A2,2 0 0,1 3,18V6A2,2 0 0,1 5,4M5,8V12H11V8H5M13,8V12H19V8H13M5,14V18H11V14H5M13,14V18H19V14H13Z" />
+            <path d="M9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5Z" />
           </svg>
-          <p>No hay datos para mostrar</p>
+          <p>Realiza una búsqueda para ver resultados</p>
         </div>
       </div>
     </div>
     `
   }
 
-  // Método preparado para cargar datos en el futuro
-  async loadData (endpoint) {
-    // try {
-    //   const response = await fetch(endpoint)
-    //
-    //   if (!response.ok) {
-    //     throw new Error(`Error fetching data: ${response.statusText}`)
-    //   }
-    //
-    //   this.data = await response.json()
-    //   this.renderData()
-    // } catch (error) {
-    //   console.error('Error loading data:', error)
-    //   this.data = []
-    // }
-  }
-
-  // Método preparado para renderizar datos
   renderData () {
     const tableBody = this.shadow.querySelector('.table-body')
+    const resultCount = this.shadow.querySelector('.result-count')
+
     tableBody.innerHTML = ''
 
     if (this.data.length === 0) {
       tableBody.innerHTML = `
         <div class="empty-state">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <title>table</title>
-            <path d="M5,4H19A2,2 0 0,1 21,6V18A2,2 0 0,1 19,20H5A2,2 0 0,1 3,18V6A2,2 0 0,1 5,4M5,8V12H11V8H5M13,8V12H19V8H13M5,14V18H11V14H5M13,14V18H19V14H13Z" />
+            <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z" />
           </svg>
-          <p>No hay datos para mostrar</p>
+          <p>No se encontraron viviendas relacionadas</p>
         </div>
       `
+      resultCount.textContent = '0 viviendas'
       return
     }
 
-    // Aquí se renderizarán los datos cuando se implementen
-    this.data.forEach(item => {
-      // Renderizar cada item
+    resultCount.textContent = `${this.data.length} ${this.data.length === 1 ? 'vivienda' : 'viviendas'}`
+
+    this.data.forEach(property => {
+      const card = document.createElement('div')
+      card.className = 'property-card'
+
+      card.innerHTML = `
+        <div class="property-title">${property.title || 'Sin título'}</div>
+        <div class="property-location">
+          <svg class="location-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z" />
+          </svg>
+          ${property.locationSlug || 'Ubicación no disponible'}
+        </div>
+        <div class="property-details">
+          ${property.rooms ? `<span class="detail-item">🛏️ ${property.rooms} hab.</span>` : ''}
+          ${property.bathrooms ? `<span class="detail-item">🚿 ${property.bathrooms} baños</span>` : ''}
+          ${property.meters ? `<span class="detail-item">📏 ${property.meters}m²</span>` : ''}
+        </div>
+        ${property.price ? `<div class="property-price">${property.price}€/mes</div>` : ''}
+      `
+
+      card.addEventListener('click', () => {
+        if (property.url) {
+          window.open(property.url, '_blank')
+        }
+      })
+
+      tableBody.appendChild(card)
     })
   }
 }

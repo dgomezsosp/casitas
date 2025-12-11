@@ -2,7 +2,7 @@ class PromptComponent extends HTMLElement {
   constructor () {
     super()
     this.shadow = this.attachShadow({ mode: 'open' })
-    this.endpoint = '/api/prompts' // Endpoint preparado para implementar después
+    this.endpoint = `${import.meta.env.VITE_API_URL}/api/customer/search`
   }
 
   connectedCallback () {
@@ -61,6 +61,11 @@ class PromptComponent extends HTMLElement {
         background-color: hsl(200, 77%, 98%);
       }
 
+      .prompt-input:disabled {
+        background-color: hsl(0, 0%, 95%);
+        cursor: not-allowed;
+      }
+
       .submit-button {
         padding: 12px 24px;
         background-color: hsl(200, 77%, 35%);
@@ -72,23 +77,49 @@ class PromptComponent extends HTMLElement {
         cursor: pointer;
       }
 
-      .submit-button:hover {
+      .submit-button:hover:not(:disabled) {
         background-color: hsl(200, 77%, 25%);
       }
 
-      .submit-button:active {
+      .submit-button:active:not(:disabled) {
         background-color: hsl(200, 77%, 20%);
+      }
+
+      .submit-button:disabled {
+        background-color: hsl(0, 0%, 70%);
+        cursor: not-allowed;
+      }
+
+      .error-message {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 5px;
+        padding: 8px 12px;
+        background-color: hsl(0, 70%, 95%);
+        border: 1px solid hsl(0, 70%, 60%);
+        border-radius: 5px;
+        color: hsl(0, 70%, 30%);
+        font-size: 0.9rem;
+      }
+
+      .wrapper {
+        position: relative;
       }
     </style>
 
-    <div class="prompt-container">
-      <input 
-        type="text" 
-        class="prompt-input" 
-        placeholder="Escribe tu consulta aquí..."
-        name="prompt"
-      >
-      <button class="submit-button">Enviar</button>
+    <div class="wrapper">
+      <div class="prompt-container">
+        <input 
+          type="text" 
+          class="prompt-input" 
+          placeholder="Ej: busco una casa con cocina grande y dos baños..."
+          name="prompt"
+        >
+        <button class="submit-button">Buscar</button>
+      </div>
+      <div class="error-message" style="display: none;"></div>
     </div>
     `
 
@@ -99,12 +130,10 @@ class PromptComponent extends HTMLElement {
     const submitButton = this.shadow.querySelector('.submit-button')
     const input = this.shadow.querySelector('.prompt-input')
 
-    // Evento para el botón
     submitButton.addEventListener('click', () => {
       this.handleSubmit()
     })
 
-    // Evento para Enter en el input
     input.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         this.handleSubmit()
@@ -112,42 +141,73 @@ class PromptComponent extends HTMLElement {
     })
   }
 
+  showError (message) {
+    const errorDiv = this.shadow.querySelector('.error-message')
+    errorDiv.textContent = message
+    errorDiv.style.display = 'block'
+
+    setTimeout(() => {
+      errorDiv.style.display = 'none'
+    }, 5000)
+  }
+
+  setLoading (isLoading) {
+    const input = this.shadow.querySelector('.prompt-input')
+    const button = this.shadow.querySelector('.submit-button')
+
+    input.disabled = isLoading
+    button.disabled = isLoading
+    button.textContent = isLoading ? 'Buscando...' : 'Buscar'
+  }
+
   async handleSubmit () {
     const input = this.shadow.querySelector('.prompt-input')
     const value = input.value.trim()
 
     if (!value) {
-      console.log('El prompt está vacío')
+      this.showError('Por favor, escribe una búsqueda')
       return
     }
 
-    console.log('Prompt enviado:', value)
+    this.setLoading(true)
 
-    // Aquí se implementará el POST al endpoint
-    // try {
-    //   const response = await fetch(this.endpoint, {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     },
-    //     body: JSON.stringify({ prompt: value })
-    //   })
-    //
-    //   if (!response.ok) {
-    //     throw response
-    //   }
-    //
-    //   const data = await response.json()
-    //   console.log('Respuesta:', data)
-    //
-    //   // Limpiar input después de enviar
-    //   input.value = ''
-    // } catch (error) {
-    //   console.error('Error al enviar prompt:', error)
-    // }
+    try {
+      const response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ query: value })
+      })
 
-    // Por ahora solo limpiamos el input
-    input.value = ''
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Error en la búsqueda')
+      }
+
+      const data = await response.json()
+
+      // Emitir evento personalizado con los resultados
+      const event = new CustomEvent('search-results', {
+        detail: {
+          data: data.data || [],
+          message: data.message,
+          query: value
+        },
+        bubbles: true,
+        composed: true
+      })
+
+      this.dispatchEvent(event)
+
+      // Limpiar input después de búsqueda exitosa
+      input.value = ''
+    } catch (error) {
+      console.error('Error al realizar la búsqueda:', error)
+      this.showError(error.message || 'Error al realizar la búsqueda')
+    } finally {
+      this.setLoading(false)
+    }
   }
 }
 

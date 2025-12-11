@@ -15,7 +15,7 @@ exports.findAll = async (req, res, next) => {
 exports.findOne = async (req, res, next) => {
   try {
     const { propertyId } = req.params
-    
+
     const response = await elementService.findOne({ propertyId })
 
     if (!response) {

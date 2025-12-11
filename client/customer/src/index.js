@@ -1,2 +1,6 @@
 import './components/casitas-component.js'
 import './components/page-component.js'
+import './components/main-component.js'
+import './components/prompt-component.js'
+import './components/table-component.js'
+import './components/map-component.js'

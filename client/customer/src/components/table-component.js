@@ -1,18 +1,48 @@
+import { store } from '../redux/store.js'
+import { setSelectedProperty } from '../redux/crud-slice.js'
+
 class TableComponent extends HTMLElement {
   constructor () {
     super()
     this.shadow = this.attachShadow({ mode: 'open' })
     this.data = []
+    this.selectedPropertyId = null
+    this.unsubscribe = null
   }
 
   connectedCallback () {
     this.render()
 
+    // Suscribirse a cambios en Redux
+    this.unsubscribe = store.subscribe(() => {
+      const currentState = store.getState()
+      const newSelectedId = currentState.crud.selectedProperty
+
+      // Si cambió la propiedad seleccionada desde el mapa
+      if (newSelectedId !== this.selectedPropertyId) {
+        this.selectedPropertyId = newSelectedId
+        this.renderData()
+
+        // Hacer scroll a la propiedad seleccionada si existe
+        if (newSelectedId) {
+          this.scrollToProperty(newSelectedId)
+        }
+      }
+    })
+
     // Escuchar eventos de búsqueda
     document.addEventListener('search-results', (event) => {
       this.data = event.detail.data || []
+      this.selectedPropertyId = null
+      store.dispatch(setSelectedProperty(null))
       this.renderData()
     })
+  }
+
+  disconnectedCallback () {
+    if (this.unsubscribe) {
+      this.unsubscribe()
+    }
   }
 
   render () {
@@ -118,11 +148,34 @@ class TableComponent extends HTMLElement {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
+      .property-card.expanded {
+        background-color: white;
+        border-color: hsl(200, 77%, 35%);
+        border-width: 2px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .property-card.collapsed {
+        padding: 10px 15px;
+      }
+
       .property-title {
         font-size: 1.1rem;
         font-weight: 600;
         color: hsl(200, 77%, 25%);
         margin-bottom: 8px;
+      }
+
+      .property-card.collapsed .property-title {
+        margin-bottom: 0;
+      }
+
+      .property-details-container {
+        display: none;
+      }
+
+      .property-card.expanded .property-details-container {
+        display: block;
       }
 
       .property-location {
@@ -159,6 +212,39 @@ class TableComponent extends HTMLElement {
         width: 16px;
         height: 16px;
         fill: hsl(0, 0%, 40%);
+      }
+
+      .property-link-button {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 20px;
+        background-color: hsl(200, 77%, 35%);
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+      }
+
+      .property-link-button:hover {
+        background-color: hsl(200, 77%, 25%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .property-link-button:active {
+        transform: translateY(0);
+      }
+
+      .property-link-button svg {
+        width: 16px;
+        height: 16px;
+        fill: white;
+        vertical-align: middle;
+        margin-left: 6px;
       }
     </style>
 
@@ -202,32 +288,78 @@ class TableComponent extends HTMLElement {
 
     this.data.forEach(property => {
       const card = document.createElement('div')
-      card.className = 'property-card'
+      card.className = 'property-card collapsed'
+      card.dataset.propertyId = property.propertyId || property.id
+
+      // Si esta propiedad está seleccionada, expandirla
+      if (this.selectedPropertyId && (property.propertyId === this.selectedPropertyId || property.id === this.selectedPropertyId)) {
+        card.classList.remove('collapsed')
+        card.classList.add('expanded')
+      }
 
       card.innerHTML = `
         <div class="property-title">${property.title || 'Sin título'}</div>
-        <div class="property-location">
-          <svg class="location-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z" />
-          </svg>
-          ${property.locationSlug || 'Ubicación no disponible'}
+        <div class="property-details-container">
+          <div class="property-location">
+            <svg class="location-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z" />
+            </svg>
+            ${property.locationSlug || 'Ubicación no disponible'}
+          </div>
+          <div class="property-details">
+            ${property.rooms ? `<span class="detail-item">🛏️ ${property.rooms} hab.</span>` : ''}
+            ${property.bathrooms ? `<span class="detail-item">🚿 ${property.bathrooms} baños</span>` : ''}
+            ${property.meters ? `<span class="detail-item">📐 ${property.meters}m²</span>` : ''}
+          </div>
+          ${property.price ? `<div class="property-price">${property.price}€/mes</div>` : ''}
+          ${property.url
+? `
+            <a href="${property.url}" target="_blank" rel="noopener noreferrer" class="property-link-button">
+              Ver propiedad
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z" />
+              </svg>
+            </a>
+          `
+: ''}
         </div>
-        <div class="property-details">
-          ${property.rooms ? `<span class="detail-item">🛏️ ${property.rooms} hab.</span>` : ''}
-          ${property.bathrooms ? `<span class="detail-item">🚿 ${property.bathrooms} baños</span>` : ''}
-          ${property.meters ? `<span class="detail-item">📏 ${property.meters}m²</span>` : ''}
-        </div>
-        ${property.price ? `<div class="property-price">${property.price}€/mes</div>` : ''}
       `
 
-      card.addEventListener('click', () => {
-        if (property.url) {
-          window.open(property.url, '_blank')
+      card.addEventListener('click', (e) => {
+        // No hacer nada si se clickeó el botón de enlace
+        if (e.target.closest('.property-link-button')) {
+          return
         }
+
+        e.stopPropagation()
+        this.handleCardClick(property.propertyId || property.id)
       })
 
       tableBody.appendChild(card)
     })
+  }
+
+  handleCardClick (propertyId) {
+    // Si se clickea la misma propiedad que ya está expandida, colapsarla
+    if (this.selectedPropertyId === propertyId) {
+      this.selectedPropertyId = null
+      store.dispatch(setSelectedProperty(null))
+    } else {
+      // Expandir la nueva propiedad
+      this.selectedPropertyId = propertyId
+      store.dispatch(setSelectedProperty(propertyId))
+    }
+
+    this.renderData()
+  }
+
+  scrollToProperty (propertyId) {
+    setTimeout(() => {
+      const card = this.shadow.querySelector(`[data-property-id="${propertyId}"]`)
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 100)
   }
 }
 

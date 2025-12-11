@@ -1,4 +1,6 @@
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
+import { store } from '../redux/store.js'
+import { setSelectedProperty } from '../redux/crud-slice.js'
 
 setOptions({
   key: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -13,15 +15,41 @@ class Map extends HTMLElement {
     this.markers = []
     this.data = []
     this.map = null
+    this.selectedPropertyId = null
+    this.unsubscribe = null
   }
 
   async connectedCallback () {
     await this.render()
 
+    // Suscribirse a cambios en Redux
+    this.unsubscribe = store.subscribe(() => {
+      const currentState = store.getState()
+      const newSelectedId = currentState.crud.selectedProperty
+
+      // Si cambió la propiedad seleccionada (desde la tabla)
+      if (newSelectedId !== this.selectedPropertyId) {
+        this.selectedPropertyId = newSelectedId
+        this.updateMarkerStyles()
+
+        // Hacer zoom a la propiedad si fue seleccionada desde la tabla
+        if (newSelectedId) {
+          this.zoomToProperty(newSelectedId)
+        }
+      }
+    })
+
     // Escuchar eventos de búsqueda
     document.addEventListener('search-results', (event) => {
+      this.selectedPropertyId = null
       this.updateMarkers(event.detail.data)
     })
+  }
+
+  disconnectedCallback () {
+    if (this.unsubscribe) {
+      this.unsubscribe()
+    }
   }
 
   async render () {
@@ -122,6 +150,7 @@ class Map extends HTMLElement {
     // Limpiar markers anteriores
     this.markers.forEach(marker => marker.setMap(null))
     this.markers = []
+    this.data = data || []
 
     if (!data || data.length === 0) {
       return
@@ -146,8 +175,66 @@ class Map extends HTMLElement {
         content: pinView.element
       })
 
+      // Guardar referencia al PinElement y propertyId
+      marker.pinView = pinView
+      marker.propertyId = element.propertyId || element.id
+
+      // Agregar event listener al marcador
+      marker.addListener('click', () => {
+        this.handleMarkerClick(marker.propertyId, marker.position)
+      })
+
       this.markers.push(marker)
     })
+  }
+
+  handleMarkerClick (propertyId, position) {
+    // Despachar la acción a Redux
+    store.dispatch(setSelectedProperty(propertyId))
+    this.selectedPropertyId = propertyId
+
+    // Actualizar estilos de marcadores
+    this.updateMarkerStyles()
+
+    // Hacer un pequeño zoom hacia el marcador
+    this.map.panTo(position)
+    const currentZoom = this.map.getZoom()
+    if (currentZoom < 14) {
+      this.map.setZoom(14)
+    }
+  }
+
+  updateMarkerStyles () {
+    this.markers.forEach(marker => {
+      const isSelected = marker.propertyId === this.selectedPropertyId
+
+      // Actualizar el estilo del pin
+      if (marker.pinView) {
+        marker.pinView.background = isSelected
+          ? 'hsl(280deg 56% 67%)' // Color más claro cuando está seleccionado
+          : 'hsl(280deg 56% 47%)'  // Color normal
+
+        marker.pinView.borderColor = isSelected
+          ? 'hsl(280deg 56% 30%)' // Borde más oscuro cuando está seleccionado
+          : 'hsl(0deg 0% 0%)'     // Borde normal
+
+        marker.pinView.scale = isSelected ? 1.2 : 1 // Ligeramente más grande
+      }
+    })
+  }
+
+  zoomToProperty (propertyId) {
+    const marker = this.markers.find(m => m.propertyId === propertyId)
+
+    if (marker && marker.position) {
+      // Animar el pan y zoom
+      this.map.panTo(marker.position)
+
+      const currentZoom = this.map.getZoom()
+      if (currentZoom < 14) {
+        this.map.setZoom(14)
+      }
+    }
   }
 }
 
